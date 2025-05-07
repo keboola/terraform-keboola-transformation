@@ -13,11 +13,6 @@ output "component_id" {
   value       = keboola_component_configuration.this.component_id
 }
 
-output "version" {
-  description = "The version number of the created Keboola component configuration."
-  value       = keboola_component_configuration.this.version
-}
-
 output "change_description" {
   description = "The change description associated with the latest version of the configuration."
   value       = keboola_component_configuration.this.change_description
