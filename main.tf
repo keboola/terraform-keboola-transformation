@@ -1,6 +1,6 @@
 locals {
   # Read script content if a path is provided. The path is relative to this module's directory.
-  script_content = var.sql_script_path != null ? file("${path.module}/${var.sql_script_path}") : null
+  script_content = var.sql_script_path != null ? file(var.sql_script_path) : null
 
   # Process scripts based on component type.
   # For Python transformations, the entire file content is treated as a single script.
