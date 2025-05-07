@@ -6,7 +6,7 @@ These modules aim to simplify the deployment and management of Keboola configura
 
 ## Available Modules
 
-- **[Transformation Module](./transformation/README.md)**: A module for creating and managing Keboola transformation configurations (SQL, Python). 
+- **[Transformation Module](./modules/transformation/README.md)**: A module for creating and managing Keboola transformation configurations (SQL, Python). 
 
 For detailed information on each module, including usage examples, inputs, and outputs, please refer to the `README.md` file within the respective module's directory.
 
