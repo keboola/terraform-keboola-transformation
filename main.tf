@@ -36,7 +36,7 @@ locals {
     storage = (var.input_tables != null || var.output_tables != null) ? {
       input  = var.input_tables  # jsonencode will omit this field if var.input_tables is null
       output = var.output_tables # jsonencode will omit this field if var.output_tables is null
-    } : null # Storage block is null if neither input_tables nor output_tables are provided
+    } : {} # Storage block is null if neither input_tables nor output_tables are provided
   }
 }
 
