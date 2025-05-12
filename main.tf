@@ -34,9 +34,9 @@ locals {
     } : null # Parameters block is null if no script or empty script list
 
     storage = (var.input_tables != null || var.output_tables != null) ? {
-      input  = var.input_tables  # jsonencode will omit this field if var.input_tables is null
-      output = var.output_tables # jsonencode will omit this field if var.output_tables is null
-    } : {} # Storage block is null if neither input_tables nor output_tables are provided
+      input  = var.input_tables != null ? var.input_tables : {}  # jsonencode will omit this field if var.input_tables is null
+      output = var.output_tables != null ? var.output_tables : {} # jsonencode will omit this field if var.output_tables is null
+    } : {} # Storage block is empty JSON object if neither input_tables nor output_tables are provided
   }
 }
 
