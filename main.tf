@@ -1,6 +1,6 @@
 locals {
   # Read script content if a path is provided. The path is relative to this module's directory.
-  script_content = var.sql_script_path != null ? file("${path.module}/${var.sql_script_path}") : null
+  script_content = var.sql_script_path != null ? file(var.sql_script_path) : null
 
   # Process scripts based on component type.
   # For Python transformations, the entire file content is treated as a single script.
@@ -36,7 +36,7 @@ locals {
     storage = (var.input_tables != null || var.output_tables != null) ? {
       input  = var.input_tables  # jsonencode will omit this field if var.input_tables is null
       output = var.output_tables # jsonencode will omit this field if var.output_tables is null
-    } : null # Storage block is null if neither input_tables nor output_tables are provided
+    } : {} # Storage block is null if neither input_tables nor output_tables are provided
   }
 }
 
