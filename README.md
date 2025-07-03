@@ -5,9 +5,9 @@ This Terraform module creates and manages a Keboola component configuration, typ
 ## Features
 
 - Supports Snowflake, Google BigQuery, and Python transformations.
-- Dynamically configures transformation blocks and scripts based on a provided script file.
+- Dynamically configures transformation blocks and scripts based on provided script files.
 - Allows optional configuration of input and output storage mapping.
-- Handles splitting of SQL scripts into multiple statements.
+- Handles multiple scripts, each with its own block and code name.
 
 ## Usage Example
 
@@ -21,13 +21,24 @@ module "my_snowflake_transformation" {
   component_id  = "keboola.snowflake-transformation"
   description   = "This transformation processes raw data into an aggregated table."
 
-  sql_script_path = "scripts/my_snowflake_query.sql" # Path relative to the module's location
+  scripts = [
+    {
+      path       = "scripts/my_snowflake_query1.sql"
+      block_name = "Block 1"
+      code_name  = "Script 1"
+    },
+    {
+      path       = "scripts/my_snowflake_query2.sql"
+      block_name = "Block 2"
+      code_name  = "Script 2"
+    }
+  ]
 
   # Optional: Define output tables
   output_tables = [
     {
-      destination = "out.c-my-transformation.processed-data" # Example destination
-      source      = "processed_data_table"                   # Must match table name in script if created
+      destination = "out.c-my-transformation.processed-data"
+      source      = "processed_data_table"
       primary_key = ["ID"]
     }
   ]
@@ -60,20 +71,18 @@ module "my_snowflake_transformation" {
 
 ```
 
-Make sure to create the script file (e.g., `transformation/scripts/my_snowflake_query.sql` if you place scripts inside the module directory, or adjust `sql_script_path` accordingly if it's elsewhere).
+Make sure to create the script files (e.g., `transformation/scripts/my_snowflake_query1.sql`, `transformation/scripts/my_snowflake_query2.sql`).
 
 ## Inputs
 
-| Name                | Description                                                                                                         | Type     | Default   | Required |
-|---------------------|---------------------------------------------------------------------------------------------------------------------|----------|-----------|----------|
-| `resource_name`     | Name of the Keboola component configuration resource. Also used in naming output tables if applicable.                | `string` |           | yes      |
-| `component_id`      | Identifier of the Keboola component (e.g., 'keboola.snowflake-transformation').                                       | `string` |           | yes      |
-| `description`       | Optional description for the Keboola component configuration.                                                         | `string` | `null`    | no       |
-| `sql_script_path`   | Path to the SQL/Python script file relative to this module's location (e.g., 'scripts/my_query.sql').                  | `string` | `null`    | no       |
-| `block_name`        | Name for the transformation block (e.g., 'Main Block'). Used if `sql_script_path` is provided.                        | `string` | "Block 1" | no       |
-| `code_name`         | Name for the code/script within the block (e.g., 'Run Script'). Used if `sql_script_path` is provided.                 | `string` | "Script"  | no       |
-| `input_tables`      | Optional list of input table configurations. Refer to Keboola documentation for structure.                          | `any`    | `null`    | no       |
-| `output_tables`     | Optional list of output table configurations. Refer to Keboola documentation for structure.                         | `any`    | `null`    | no       |
+| Name            | Description                                                                                                         | Type     | Default   | Required |
+|-----------------|---------------------------------------------------------------------------------------------------------------------|----------|-----------|----------|
+| `resource_name` | Name of the Keboola component configuration resource. Also used in naming output tables if applicable.                | `string` |           | yes      |
+| `component_id`  | Identifier of the Keboola component (e.g., 'keboola.snowflake-transformation').                                       | `string` |           | yes      |
+| `description`   | Optional description for the Keboola component configuration.                                                         | `string` | `null`    | no       |
+| `scripts`       | List of script objects, each with `path`, `block_name`, and `code_name`.                                              | `list(object)` | `[]` | no       |
+| `input_tables`  | Optional list of input table configurations. Refer to Keboola documentation for structure.                          | `any`    | `null`    | no       |
+| `output_tables` | Optional list of output table configurations. Refer to Keboola documentation for structure.                         | `any`    | `null`    | no       |
 
 ## Outputs
 
@@ -87,5 +96,6 @@ Make sure to create the script file (e.g., `transformation/scripts/my_snowflake_
 
 ## Script Handling
 
-- For `keboola.python-transformation-v2`, the entire content of the file specified by `sql_script_path` is treated as a single script.
-- For SQL-based transformations (e.g., `keboola.snowflake-transformation`, `keboola.google-bigquery-transformation`), the content of the file specified by `sql_script_path` is split by semicolons (`;`). Each resulting part is treated as an individual script in the `codes` array. Empty statements resulting from trailing semicolons are automatically removed. Ensure each logical SQL command ends with a semicolon. 
+- Each entry in the `scripts` variable is treated as a separate transformation block.
+- For `keboola.python-transformation-v2`, the entire content of the file specified by `path` is treated as a single script.
+- For SQL-based transformations (e.g., `keboola.snowflake-transformation`, `keboola.google-bigquery-transformation`), the content of the file specified by `path` is treated as a single code block. If you need to split scripts by semicolons, do so in your script file or create multiple script objects. 
