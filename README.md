@@ -69,9 +69,51 @@ module "my_snowflake_transformation" {
 # INSERT INTO "processed_data_table" ("ID", "event_count")
 # VALUES (100, 5);
 
-```
+## Scripts Variable Details
 
-Make sure to create the script files (e.g., `transformation/scripts/my_snowflake_query1.sql`, `transformation/scripts/my_snowflake_query2.sql`).
+The `scripts` variable is a list of script objects, each specifying:
+- `path`: Path to the script file (relative to this module)
+- `block_name`: Name for the transformation block
+- `code_name`: Name for the code/script within the block
+
+**Behavior:**
+- Multiple script objects with the same `block_name` and `code_name` will be combined into a single code block, and their contents merged.
+- For SQL transformations (Snowflake, BigQuery), each script file is split by semicolon (`;`), and each statement becomes a separate element in the script array for that code block.
+- For Python transformations, the entire file content is used as a single script string (no splitting).
+
+**Example for SQL transformation:**
+```hcl
+scripts = [
+  {
+    path       = "scripts/my_query1.sql"
+    block_name = "Block 1"
+    code_name  = "Script 1"
+  },
+  {
+    path       = "scripts/my_query2.sql"
+    block_name = "Block 1"
+    code_name  = "Script 1"
+  },
+  {
+    path       = "scripts/my_query3.sql"
+    block_name = "Block 2"
+    code_name  = "Script 2"
+  }
+]
+```
+All scripts with `block_name = "Block 1"` and `code_name = "Script 1"` will be merged into a single code block, and each SQL statement (split by `;`) will be a separate element in the script array.
+
+**Example for Python transformation:**
+```hcl
+scripts = [
+  {
+    path       = "scripts/my_script.py"
+    block_name = "Block 1"
+    code_name  = "Main"
+  }
+]
+```
+The entire file content will be used as a single script string in the script array.
 
 ## Inputs
 
