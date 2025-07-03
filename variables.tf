@@ -18,22 +18,54 @@ variable "description" {
   default     = null
 }
 
-variable "sql_script_path" {
-  description = "Path to the SQL/Python script file relative to this module's location (e.g., 'scripts/my_query.sql'). If provided, transformation blocks will be configured."
-  type        = string
-  default     = null
-}
+variable "scripts" {
+  description = <<EOT
+List of script objects, each specifying:
+- path: Path to the script file (relative to this module)
+- block_name: Name for the transformation block
+- code_name: Name for the code/script within the block
 
-variable "block_name" {
-  description = "Name for the transformation block (e.g., 'Main Block'). Required and used only if 'sql_script_path' is provided."
-  type        = string
-  default     = "Block 1"
-}
+**Behavior:**
+- Multiple script objects with the same block_name and code_name will be combined into a single code block, and their contents merged.
+- For SQL transformations (Snowflake, BigQuery), each script file is split by semicolon (`;`), and each statement becomes a separate element in the script array for that code block.
+- For Python transformations, the entire file content is used as a single script string (no splitting).
 
-variable "code_name" {
-  description = "Name for the code/script within the transformation block (e.g., 'Run Script'). Required and used only if 'sql_script_path' is provided."
-  type        = string
-  default     = "Script"
+**Example for SQL transformation:**
+[
+  {
+    path       = "scripts/my_query1.sql"
+    block_name = "Block 1"
+    code_name  = "Script 1"
+  },
+  {
+    path       = "scripts/my_query2.sql"
+    block_name = "Block 1"
+    code_name  = "Script 1"
+  },
+  {
+    path       = "scripts/my_query3.sql"
+    block_name = "Block 2"
+    code_name  = "Script 2"
+  }
+]
+# All scripts with block_name = "Block 1" and code_name = "Script 1" will be merged into a single code block, and each SQL statement (split by `;`) will be a separate element in the script array.
+
+**Example for Python transformation:**
+[
+  {
+    path       = "scripts/my_script.py"
+    block_name = "Block 1"
+    code_name  = "Main"
+  }
+]
+# The entire file content will be used as a single script string in the script array.
+EOT
+  type = list(object({
+    path       = string
+    block_name = string
+    code_name  = string
+  }))
+  default = []
 }
 
 variable "input_tables" {

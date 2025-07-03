@@ -1,42 +1,63 @@
 locals {
-  # Read script content if a path is provided. The path is relative to this module's directory.
-  script_content = var.sql_script_path != null ? file(var.sql_script_path) : null
+  # Read and process each script object in var.scripts.
+  # Each script object contains: path (relative to module), block_name, code_name.
+  scripts_content = [
+    for script in var.scripts : {
+      block_name = script.block_name
+      code_name  = script.code_name
+      content    = file(script.path)
+    }
+  ]
 
-  # Process scripts based on component type.
-  # For Python transformations, the entire file content is treated as a single script.
-  # For SQL-like transformations, the content is split by semicolons, and each part is treated as a separate script.
-  scripts_list = var.sql_script_path == null || local.script_content == null ? [] : (
-    var.component_id == "keboola.python-transformation-v2" ? [local.script_content] :
-    # SQL-like processing: split by ';', trim, re-add ';', and filter empty statements.
-    # This handles cases where the script might end with a semicolon, leading to an empty last part after split.
-    compact([
-      for idx, part_content in split(";", local.script_content) :
-      (idx == length(split(";", local.script_content)) - 1 && trimspace(part_content) == "") ? null : "${trimspace(part_content)};"
+  # Get unique block names
+  block_names = toset([for script in local.scripts_content : script.block_name])
+
+  # For each block, get unique code names
+  block_code_names = {
+    for block_name in local.block_names :
+    block_name => toset([
+      for script in local.scripts_content : script.code_name
+      if script.block_name == block_name
     ])
-  )
+  }
 
-  # Construct the configuration map for jsonencode.
-  # Parameters (blocks and codes) are included only if a script is provided and processed successfully (scripts_list is not empty).
-  # Storage (input/output tables) is included only if corresponding variables are provided.
-  dynamic_configuration = {
-    parameters = var.sql_script_path != null && length(local.scripts_list) > 0 ? {
-      blocks = [
-        {
-          name = var.block_name
-          codes = [
-            {
-              name   = var.code_name
-              script = local.scripts_list # Must be a list of strings
-            }
+  # Group scripts by block_name and code_name, and split each script file by semicolon for SQL, or keep as single string for Python
+  blocks = [
+    for block_name in local.block_names : {
+      name  = block_name
+      codes = [
+        for code_name in local.block_code_names[block_name] : {
+          name   = code_name
+          script = [
+            for s in (
+              var.component_id == "keboola.python-transformation-v2"
+                ? [
+                    for script in local.scripts_content :
+                    script.block_name == block_name && script.code_name == code_name ? script.content : null
+                    if script.block_name == block_name && script.code_name == code_name
+                  ]
+                : flatten([
+                    for script in local.scripts_content :
+                    script.block_name == block_name && script.code_name == code_name ? [
+                      for part in split(";", script.content) :
+                      trimspace(part) != "" ? "${trimspace(part)};" : null
+                    ] : []
+                    if script.block_name == block_name && script.code_name == code_name
+                  ])
+            ) : s if s != null
           ]
         }
       ]
-    } : null # Parameters block is null if no script or empty script list
+    }
+  ]
 
-    storage = (var.input_tables != null || var.output_tables != null) ? {
-      input  = var.input_tables != null ? var.input_tables : {}  # jsonencode will omit this field if var.input_tables is null
-      output = var.output_tables != null ? var.output_tables : {} # jsonencode will omit this field if var.output_tables is null
-    } : {} # Storage block is empty JSON object if neither input_tables nor output_tables are provided
+  # Construct the configuration map for jsonencode.
+  dynamic_configuration = {
+    parameters = length(local.blocks) > 0 ? { blocks = local.blocks } : null
+    storage    = (var.input_tables != null || var.output_tables != null) ? {
+      input  = var.input_tables != null ? var.input_tables : {}
+      output = var.output_tables != null ? var.output_tables : {}
+    } : {}
   }
 }
 
@@ -44,10 +65,5 @@ resource "keboola_component_configuration" "this" {
   name         = var.resource_name
   component_id = var.component_id
   description  = var.description # Terraform handles null description appropriately (omits or sets as empty based on provider)
-
-  # The configuration argument expects a JSON string.
-  # local.dynamic_configuration is a map that will be converted to JSON.
-  # Null fields within this map (e.g., parameters or storage if not applicable) will be omitted by jsonencode,
-  # resulting in a clean JSON structure as expected by the Keboola API.
   configuration = jsonencode(local.dynamic_configuration)
 } 
